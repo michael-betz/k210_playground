@@ -1,3 +1,8 @@
+# Run with platform.io
+```bash
+pio run -t upload
+```
+
 # Increase exposure time
 ... to get a better low light performance and less horizontal lines in the piucture.
 Pixel clock needs to be slowed down by setting ov2460 internal clock divider.
