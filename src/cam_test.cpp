@@ -33,7 +33,7 @@ unsigned getJpegSize(uint8_t *buf, unsigned maxSize)
   return n;
 }
 
-#define ESP_BAUD 115200 * 30
+#define ESP_BAUD 115200 * 20
 #define SER_BAUD 1000000
 
 void initFastWifi(void) {
@@ -67,11 +67,12 @@ void setup()
 
     // attempt to connect to WiFi network
     lcd.setTextColor(COLOR_YELLOW);
-    while (status != WL_CONNECTED) {
-      lcd.println(WIFI_SSID);
-      status = WiFi.begin(WIFI_SSID, WIFI_PW);
-    }
-    lcd.setTextColor(COLOR_WHITE);
+    // while (status != WL_CONNECTED) {
+    //   lcd.println(WIFI_SSID);
+    //   status = WiFi.begin(WIFI_SSID, WIFI_PW);
+    // }
+    // lcd.setTextColor(COLOR_WHITE);
+    WiFi.beginAP("cam_test");
 
     Udp.begin(localPort);
     Serial.printf("Listening on port %d\n", localPort);
@@ -96,6 +97,8 @@ void setup()
 
     uint8_t qual = 24;
     cam.ov2640_set_quality(qual);
+
+    unsigned isTargetIpSet = 0;
 
     while (1) {
 
@@ -139,6 +142,7 @@ void setup()
         Serial.print("RX: ");
         Serial.println(rIp);
         if (rIp != tIp) {
+          isTargetIpSet = 1;
           tIp = rIp;
           lcd.print("-> ");
           lcd.print(tIp);
@@ -147,16 +151,19 @@ void setup()
         Udp.flush();
       }
 
+      if (!isTargetIpSet)
+        continue;
+
       uint8_t *img = cam.snapshot();
       unsigned jSize = getJpegSize(img, 320 * 240 * 2);
       if (jSize >= 320 * 240 * 2) // Could not find end of jpeg :(
         continue;
 
       // const unsigned bufSize = 320 * 240 * 2;
-      // // Erase memory after jpeg
-      // // for (unsigned i = jSize; i < bufSize; i++) {
-      // //   img[i] = 0;
-      // // }
+      // Erase memory after jpeg
+      // for (unsigned i = jSize; i < bufSize; i++) {
+      //   img[i] = 0;
+      // }
       // float g;
       // int exp = 123;
       // cam.ov2640_get_gain_db(&g);
@@ -176,6 +183,7 @@ void setup()
         memcpy(&pBuff[1], p, pLen);
         Udp.beginPacket(tIp, tPort);
         Udp.write(pBuff, pLen + 1);
+        // Udp.write("pi is exactly three!!\n");
         Udp.endPacket();
         Serial.write('*');
         p += pLen;
@@ -183,6 +191,7 @@ void setup()
         pCnt++;
       }
       Serial.write('\n');
+      // delay(100);
       // nc -lu 192.168.42.183 -p 1331
     }
 }
